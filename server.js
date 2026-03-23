@@ -5,39 +5,39 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-let agendamentos = [];
+let database = {
+    agendamentos: [],
+    pedidos: []
+};
 
-// 📌 Rota Principal
-app.get("/", (req, res) => {
-    res.send("<h1>ELITE COLLECTIVE API 💈</h1>");
-});
-
-// 📌 Criar Agendamento
-app.post("/agendar", (req, res) => {
-    const { nome, whatsapp, barber, service, price, date, time, plan } = req.body;
-
-    const conflito = agendamentos.find(a => a.barber === barber && a.date === date && a.time === time);
-    if (conflito) return res.status(400).json({ erro: "Horário já ocupado" });
-
-    const novo = {
-        id: Date.now(),
-        nome, whatsapp, barber, service, price, date, time,
-        status: plan ? "Membro Premium" : "Aguardando",
-        createdAt: new Date()
+// 📌 Criar Agendamento ou Pedido
+app.post("/checkout", (req, res) => {
+    const data = req.body;
+    const id = Date.now();
+    
+    const novoRegistro = {
+        id,
+        ...data,
+        status: "Pendente",
+        pixKey: "dvignali01@gmail.com", // Sua chave real
+        timestamp: new Date()
     };
 
-    agendamentos.push(novo);
-    res.json({ sucesso: true, agendamento: novo });
+    if (data.type === 'agendamento') {
+        database.agendamentos.push(novoRegistro);
+    } else {
+        database.pedidos.push(novoRegistro);
+    }
+
+    res.json({ sucesso: true, id, pix: novoRegistro.pixKey });
 });
 
-// 📌 Listar
-app.get("/agendamentos", (req, res) => res.json(agendamentos));
-
-// 📌 Cancelar
-app.delete("/agendar/:id", (req, res) => {
-    agendamentos = agendamentos.filter(a => a.id !== parseInt(req.params.id));
-    res.json({ sucesso: true });
+app.get("/meus-dados/:whatsapp", (req, res) => {
+    const whatsapp = req.params.whatsapp;
+    const agendados = database.agendamentos.filter(a => a.whatsapp === whatsapp);
+    const compras = database.pedidos.filter(p => p.whatsapp === whatsapp);
+    res.json({ agendados, compras });
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`API rodando na porta ${PORT}`));
+app.listen(PORT, () => console.log("Elite API Online"));
