@@ -1,71 +1,43 @@
 const express = require("express");
 const cors = require("cors");
-
 const app = express();
+
 app.use(cors());
 app.use(express.json());
 
-// Banco temporário (Dados resetam ao reiniciar o Render)
 let agendamentos = [];
 
-// 📌 Rota de Saúde/Status
+// 📌 Rota Principal
 app.get("/", (req, res) => {
-    res.send("<h1>ELITE BARBER API 🔥</h1><p>Status: Online</p>");
+    res.send("<h1>ELITE COLLECTIVE API 💈</h1>");
 });
 
-// 📌 Listar Produtos
-app.get("/produtos", (req, res) => {
-    res.json([
-        { id: 101, nome: "Óleo Premium Wood", preco: 45, img: "https://images.unsplash.com/photo-1621607512214-68297480165e?w=200" },
-        { id: 102, nome: "Pomada Matte Clay", preco: 38, img: "https://images.unsplash.com/photo-1599305090598-fe179d501227?w=200" },
-        { id: 103, nome: "Shampoo Charcoal", preco: 52, img: "https://images.unsplash.com/photo-1535585209827-a15fcdbc4c2d?w=200" }
-    ]);
-});
-
-// 📌 Criar Agendamento com Lógica de Pagamento
+// 📌 Criar Agendamento
 app.post("/agendar", (req, res) => {
-    const { nome, whatsapp, barber, service, price, date, time, paymentMethod } = req.body;
+    const { nome, whatsapp, barber, service, price, date, time, plan } = req.body;
 
-    if (!barber || !date || !time || !whatsapp) {
-        return res.status(400).json({ erro: "Dados obrigatórios faltando." });
-    }
-
-    // Validação de Conflito
     const conflito = agendamentos.find(a => a.barber === barber && a.date === date && a.time === time);
-    if (conflito) {
-        return res.status(400).json({ erro: "Este horário já foi reservado com este barbeiro." });
-    }
+    if (conflito) return res.status(400).json({ erro: "Horário já ocupado" });
 
-    const novoAgendamento = {
+    const novo = {
         id: Date.now(),
-        nome,
-        whatsapp,
-        barber,
-        service,
-        price,
-        date,
-        time,
-        statusPagamento: paymentMethod === 'pix' ? "Pendente (PIX)" : "A pagar no local",
-        pixCopiaECola: paymentMethod === 'pix' ? `00020126330014BR.GOV.BCB.PIX0114${whatsapp}5204000053039865405${price}.00` : null,
+        nome, whatsapp, barber, service, price, date, time,
+        status: plan ? "Membro Premium" : "Aguardando",
         createdAt: new Date()
     };
 
-    agendamentos.push(novoAgendamento);
-    res.json({ sucesso: true, agendamento: novoAgendamento });
+    agendamentos.push(novo);
+    res.json({ sucesso: true, agendamento: novo });
 });
 
-// 📌 Listar Todos Agendamentos
-app.get("/agendamentos", (req, res) => {
-    const ordenados = agendamentos.sort((a, b) => new Date(a.date + " " + a.time) - new Date(b.date + " " + b.time));
-    res.json(ordenados);
-});
+// 📌 Listar
+app.get("/agendamentos", (req, res) => res.json(agendamentos));
 
-// 📌 Cancelar Agendamento
+// 📌 Cancelar
 app.delete("/agendar/:id", (req, res) => {
-    const id = parseInt(req.params.id);
-    agendamentos = agendamentos.filter(a => a.id !== id);
+    agendamentos = agendamentos.filter(a => a.id !== parseInt(req.params.id));
     res.json({ sucesso: true });
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
+app.listen(PORT, () => console.log(`API rodando na porta ${PORT}`));
